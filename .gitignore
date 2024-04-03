@@ -2,3 +2,5 @@ td.cfg.yml
 tds
 out.log
 venv
+build
+*.spec

@@ -26,6 +26,7 @@ def main():
     config = Config.Config(args.c)
 
     output_file = None
+    original_stdout = sys.stdout
     if config.output_file:
         output_file = open(config.output_file, 'w')
         sys.stdout = output_file
@@ -88,6 +89,7 @@ def main():
                     print("\n\n")
     finally:
         if output_file:
+            sys.stdout = original_stdout
             output_file.close()
 
 
