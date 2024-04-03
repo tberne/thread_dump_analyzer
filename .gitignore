@@ -4,3 +4,4 @@ out.log
 venv
 build
 *.spec
+**/__pycache__/
