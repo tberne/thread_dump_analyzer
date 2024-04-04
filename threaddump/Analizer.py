@@ -1,3 +1,5 @@
+import datetime
+
 from threaddump.Stacktrace import Thread, ThreadState, StackFrame, SyncObject, SyncObjectType, ThreadDump
 import re
 import threaddump.Config as Config
@@ -35,7 +37,18 @@ def __should_include__(stacktrace: list[StackFrame], include_patterns: list[str]
     return True
 
 
-def find_long_running_threads(tds: list[ThreadDump], *, config: Config) -> list[dict]:
+class LongRunningThread:
+    def __init__(self, thread: Thread, count: int, first_apparition: datetime.datetime,
+                 last_apparition: datetime.datetime, duration: datetime.timedelta):
+
+        self.thread = thread
+        self.count = count
+        self.first_apparition = first_apparition
+        self.last_apparition = last_apparition
+        self.duration = duration
+
+
+def find_long_running_threads(tds: list[ThreadDump], *, config: Config) -> list[LongRunningThread]:
     long_running_threads = {}
     include_patterns = config.long_running_threads_include_patterns
     exclude_patterns = config.long_running_threads_exclude_patterns
@@ -76,25 +89,39 @@ def find_long_running_threads(tds: list[ThreadDump], *, config: Config) -> list[
                         "last_apparition": thread_dump.date_time
                     }
 
-    long_running_threads = [{
-        "thread": thread["thread"],
-        "count": thread["count"],
-        "first_apparition": thread["first_apparition"],
-        "last_apparition": thread["last_apparition"],
-        "duration": thread["last_apparition"] - thread["first_apparition"]
-    } for thread in long_running_threads.values() if thread["count"] >= config.long_running_threads_threshold]
+    long_running_threads = [LongRunningThread(
+        thread["thread"],
+        thread["count"],
+        thread["first_apparition"],
+        thread["last_apparition"],
+        thread["last_apparition"] - thread["first_apparition"]
+    ) for thread in long_running_threads.values() if thread["count"] >= config.long_running_threads_threshold]
 
     return long_running_threads
 
 
-def find_most_recurring_threads(tds: list[ThreadDump], *, config: Config) -> dict:
+class ThreadsWithRecurringStacktrace:
+    def __init__(self, threads: list[Thread]):
+        self.threads = threads
+        self.recurring_stacktrace = threads[0].stacktrace
+
+
+class ThreadDumpsWithRecurringThreads:
+    def __init__(self, thread_dump_date: datetime.datetime,
+                 threads_with_recurring_stacktrace: list[ThreadsWithRecurringStacktrace]):
+
+        self.thread_dump_date = thread_dump_date
+        self.threads_with_recurring_stacktrace = threads_with_recurring_stacktrace
+
+
+def find_most_recurring_threads(tds: list[ThreadDump], *, config: Config) -> list[ThreadDumpsWithRecurringThreads]:
     if config.debug:
         print("Finding most recurring threads...")
 
     include_patterns = config.most_recurring_threads_include_patterns
     exclude_patterns = config.most_recurring_threads_exclude_patterns
 
-    recurring_threads = {}
+    recurring_threads = []
     for td in tds:
         recurring_threads_in_td = {}
         for thread in td.threads:
@@ -127,12 +154,9 @@ def find_most_recurring_threads(tds: list[ThreadDump], *, config: Config) -> dic
             else:
                 recurring_threads_in_td[stacktrace_str].append(thread)
 
-        recurring_threads_in_td = [{
-            "threads": threads,
-            "count": len(threads)
-        } for threads in recurring_threads_in_td.values() if len(threads) >= config.most_recurring_threads_threshold]
+        recurring_threads_in_td = [ThreadsWithRecurringStacktrace(threads) for threads in recurring_threads_in_td.values() if len(threads) >= config.most_recurring_threads_threshold]
 
         if len(recurring_threads_in_td) > 0:
-            recurring_threads[td.date_time] = recurring_threads_in_td
+            recurring_threads.append(ThreadDumpsWithRecurringThreads(td.date_time, recurring_threads_in_td))
 
     return recurring_threads

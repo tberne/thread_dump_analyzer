@@ -13,7 +13,7 @@ class Config:
             dict_keys |= dict2.keys()
 
         for key in dict_keys:
-            if isinstance(dict1[key], dict) and isinstance(dict2[key], dict):
+            if key in dict1 and isinstance(dict1[key], dict) and key in dict2 and isinstance(dict2[key], dict):
                 res[key] = Config.__merge_dicts__(dict1[key], dict2[key])
             else:
                 res[key] = dict2[key] if key in dict2 else dict1[key]
@@ -23,7 +23,6 @@ class Config:
     def __init__(self, config_file: str):
         with open(config_file, 'r') as stream:
             self.__config = Config.__merge_dicts__({
-                "output_file": None,
                 "debug": False,
                 "files": [],
                 "long_running_threads": {
@@ -37,12 +36,11 @@ class Config:
                     "threshold": 2,
                     "include_patterns": [],
                     "exclude_patterns": []
+                },
+                "renderer": {
+                    "type": "console"
                 }
             }, yaml.safe_load(stream))
-
-    @property
-    def output_file(self) -> str | None:
-        return self.__config["output_file"]
 
     @property
     def debug(self) -> bool:
@@ -83,3 +81,11 @@ class Config:
     @property
     def most_recurring_threads_exclude_patterns(self) -> list[str]:
         return self.__config["long_running_threads"]["exclude_patterns"]
+
+    @property
+    def renderer_type(self) -> str:
+        return self.__config["renderer"]["type"]
+
+    @property
+    def renderer_config(self) -> dict | None:
+        return self.__config["renderer"]["config"] if "config" in self.__config["renderer"] else None
