@@ -1,0 +1,1 @@
+pyinstaller -F --add-data renderer/ThreadDumpAnalysis.html:renderer/ThreadDumpAnalysis.html parse_thread_dump.py

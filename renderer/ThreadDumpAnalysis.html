@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Title</title>
+  <style>
+    /* CSS Reset */
+    html,
+    body,
+    div,
+    span,
+    applet,
+    object,
+    iframe,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    blockquote,
+    pre,
+    a,
+    abbr,
+    acronym,
+    address,
+    big,
+    cite,
+    code,
+    del,
+    dfn,
+    em,
+    img,
+    ins,
+    kbd,
+    q,
+    s,
+    samp,
+    small,
+    strike,
+    strong,
+    sub,
+    sup,
+    tt,
+    var,
+    b,
+    u,
+    i,
+    center,
+    dl,
+    dt,
+    dd,
+    ol,
+    ul,
+    li,
+    fieldset,
+    form,
+    label,
+    legend,
+    table,
+    caption,
+    tbody,
+    tfoot,
+    thead,
+    tr,
+    th,
+    td {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      font-size: 100%;
+      font: inherit;
+      vertical-align: baseline;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    table,
+    tr,
+    td,
+    th {
+      border: 1px solid black;
+    }
+
+    td {
+      vertical-align: top;
+      padding: 0.5rem;
+    }
+
+    .app {
+      padding: 1rem;
+    }
+
+    .stacktrace {
+      max-height: 100px;
+      overflow: hidden;
+      transition: max-height 0.5s;
+      cursor: pointer;
+
+      --mask: linear-gradient(to bottom,
+          rgba(0, 0, 0, 1) 0, rgba(0, 0, 0, 1) 40%,
+          rgba(0, 0, 0, 0) 95%, rgba(0, 0, 0, 0) 0) 100% 50% / 100% 100% repeat-x;
+
+      -webkit-mask: var(--mask);
+      mask: var(--mask);
+    }
+
+    .stacktrace.show {
+      max-height: initial;
+      mask: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="application/javascript" src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script type="application/javascript"
+    src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script type="application/javascript" src="https://unpkg.com/@babel/standalone@7.24.4/babel.js"></script>
+  <script type="text/babel">
+    const { useState } = React;
+    const renderData = __render_data__;
+
+    function RenderStacktrace({ stacktrace }) {
+      const [showStacktrace, setShowStacktrace] = useState(false);
+
+      return (
+        <pre className={"stacktrace" + (showStacktrace ? " show" : "")} onClick={() => setShowStacktrace(!showStacktrace)}>
+          {stacktrace.map((stackframe, index) => {
+            return (<div key={index}>{stackframe}</div>);
+          })}
+        </pre>
+      );
+    }
+
+    function RenderLongRunningThreads({ longRunningThreads }) {
+      return (
+        <div>
+          <h2>Long running threads</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Thread</th>
+                <th>Duration</th>
+                <th>First appearance</th>
+                <th>Last appearance</th>
+                <th>Thread stack trace</th>
+              </tr>
+            </thead>
+            <tbody>
+              {longRunningThreads.map((thread, index) => {
+                return (
+                  <tr key={index}>
+                    <td>{thread.thread}</td>
+                    <td>{thread.duration}</td>
+                    <td>{thread.first_apparition}</td>
+                    <td>{thread.last_apparition}</td>
+                    <td><RenderStacktrace stacktrace={thread.stacktrace} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    function RenderThreadsWithSameStacktraceForThreadDump({ threadDump, threadsWithSameStacktrace }) {
+      return (
+        <div>
+          <h3>Thread dump: {threadDump}. Threads with same stacktrace:</h3>
+          <RenderThreadsWithSameStacktrace threadsWithSameStacktrace={threadsWithSameStacktrace} />
+        </div>
+      );
+    }
+
+    function RenderThreadsWithSameStacktrace({ threadsWithSameStacktrace }) {
+      return (
+        <table>
+          <thead>
+            <tr>
+              <th>Threads</th>
+              <th>Stacktrace</th>
+            </tr>
+          </thead>
+          <tbody>
+            {threadsWithSameStacktrace.threads.map((threadSet, index) => {
+              return (
+                <tr key={index}>
+                  <td>
+                    <div>
+                      Thread count: {threadSet.recurring_threads.length}
+                    </div>
+                    <ul>
+                      {threadSet.recurring_threads.map((thread, index) => {
+                        return (
+                          <li key={index}>{thread}</li>
+                        );
+                      })}
+                    </ul>
+                  </td>
+                  <td>
+                    <RenderStacktrace stacktrace={threadSet.stacktrace} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      );
+    }
+
+    function RenderTDFile({ fileName, fileObject }) {
+      return (
+        <section class="td_file">
+          <h1>Thread dumps file: {fileName}</h1>
+          {fileObject.long_running_threads && <RenderLongRunningThreads longRunningThreads={fileObject.long_running_threads} />}
+          {fileObject.thread_dumps_with_recurring_threads && Object.keys(fileObject.thread_dumps_with_recurring_threads).map((threadDump, index) => {
+            return (
+              <RenderThreadsWithSameStacktraceForThreadDump key={index} threadDump={threadDump} threadsWithSameStacktrace={fileObject.thread_dumps_with_recurring_threads[threadDump]} />
+            );
+          })}
+        </section>
+      );
+    }
+
+    function App() {
+      return (
+        <div className="app">
+          {Object.keys(renderData).map((fileName, index) => {
+            return (
+              <RenderTDFile key={index} fileName={fileName} fileObject={renderData[fileName]} />
+            );
+          })}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+
+</html>

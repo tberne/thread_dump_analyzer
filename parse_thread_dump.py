@@ -6,6 +6,7 @@ from renderer.RenderData import RenderData, RenderDataForFile
 from renderer.ConsoleRenderer import ConsoleRenderer
 from renderer.FileRenderer import FileRenderer
 from renderer.JsonFileRenderer import JsonFileRenderer
+from renderer.HtmlRenderer import HtmlRenderer
 
 def __format_thread__(thread: Stacktrace.Thread, *, include_stacktrace=True) -> str:
     ret_value = f'Thread: {thread.thread_name} ({thread.thread_id}) - State: {thread.thread_state}'
@@ -72,6 +73,8 @@ def main():
             renderer = FileRenderer(config)
         case "json":
             renderer = JsonFileRenderer(config)
+        case "html":
+            renderer = HtmlRenderer(config)
         case _:
             print(f'Unknown renderer type: {renderer_type}')
             sys.exit(1)
