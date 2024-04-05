@@ -98,7 +98,7 @@
       padding: 1rem;
     }
 
-    .stacktrace {
+    .largelist {
       max-height: 100px;
       overflow: hidden;
       transition: max-height 0.5s;
@@ -112,9 +112,25 @@
       mask: var(--mask);
     }
 
-    .stacktrace.show {
+    .largelist.show {
       max-height: initial;
       mask: none;
+    }
+
+    h1 {
+      font-size: 2rem;
+    }
+
+    *+h1 {
+      margin-top: 1rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+    }
+
+    *+h2 {
+      margin-top: 1rem;
     }
   </style>
 </head>
@@ -132,8 +148,11 @@
     function RenderStacktrace({ stacktrace }) {
       const [showStacktrace, setShowStacktrace] = useState(false);
 
+      const isLarge = stacktrace.length > 10;
+      const className = `stacktrace${isLarge ? " largelist" : ""}`
+
       return (
-        <pre className={"stacktrace" + (showStacktrace ? " show" : "")} onClick={() => setShowStacktrace(!showStacktrace)}>
+        <pre className={className + (showStacktrace ? " show" : "")} onClick={() => setShowStacktrace(!showStacktrace)}>
           {stacktrace.map((stackframe, index) => {
             return (<div key={index}>{stackframe}</div>);
           })}
@@ -173,6 +192,22 @@
       );
     }
 
+    function RenderThreadList({ threads }) {
+      const isLarge = threads.length > 10;
+      const className = `threads${isLarge ? " largelist" : ""}`
+      const [showStacktrace, setShowStacktrace] = useState(false);
+
+      return (
+        <ul className={className + (showStacktrace ? " show" : "")} onClick={() => setShowStacktrace(!showStacktrace)}>
+          {threads.map((thread, index) => {
+            return (
+              <li key={index}>{thread}</li>
+            );
+          })}
+        </ul>
+      );
+    }
+
     function RenderThreadsWithSameStacktraceForThreadDump({ threadDump, threadsWithSameStacktrace }) {
       return (
         <div>
@@ -199,13 +234,7 @@
                     <div>
                       Thread count: {threadSet.recurring_threads.length}
                     </div>
-                    <ul>
-                      {threadSet.recurring_threads.map((thread, index) => {
-                        return (
-                          <li key={index}>{thread}</li>
-                        );
-                      })}
-                    </ul>
+                    <RenderThreadList threads={threadSet.recurring_threads} />
                   </td>
                   <td>
                     <RenderStacktrace stacktrace={threadSet.stacktrace} />
