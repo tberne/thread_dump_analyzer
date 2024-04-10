@@ -30,10 +30,7 @@ class ConsoleRenderer(Renderer):
             message += f'Long running threads:\n'
             message += "\n"
             for long_running_thread in render_data_for_file.long_running_threads:
-                message += f'\tLong running thread: {str(long_running_thread.thread)} is running for {
-                long_running_thread.duration}. First appearance: {
-                long_running_thread.first_apparition}. Last appearance: {long_running_thread.last_apparition}\n'
-
+                message += f'\tLong running thread: {str(long_running_thread.thread)} is running for {long_running_thread.duration}. First appearance: {long_running_thread.first_apparition}. Last appearance: {long_running_thread.last_apparition}\n'
                 message += "\tStacktrace:\n"
 
                 for stack_frame in long_running_thread.thread.stacktrace:

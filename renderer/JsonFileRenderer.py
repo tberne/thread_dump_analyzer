@@ -7,7 +7,7 @@ from threaddump.Analizer import StackFrame
 def __render_stacktrace__(stacktrace: list[StackFrame]) -> str:
     message = "\"stacktrace\": ["
     for stack_frame in stacktrace:
-        message += f'"{str(stack_frame)}",'
+        message += f'"{str(stack_frame).replace("\"", "\\\"")}",'
 
     if len(stacktrace) > 0:
         message = message[:-1]
@@ -18,7 +18,7 @@ def __render_stacktrace__(stacktrace: list[StackFrame]) -> str:
 
 def __render_long_running_thread__(long_running_thread: LongRunningThread) -> str:
     message = "{"
-    message += f'"thread": "{str(long_running_thread.thread)}",'
+    message += f'"thread": "{str(long_running_thread.thread).replace("\"", "\\\"")}",'
     message += f'"duration": "{long_running_thread.duration}",'
     message += f'"first_apparition": "{long_running_thread.first_apparition}",'
     message += f'"last_apparition": "{long_running_thread.last_apparition}",'
@@ -54,7 +54,7 @@ def __render_thread_dump_recurring_threads__(
         for thread in recurring_thread.threads:
             if not first_recurring_thread:
                 message += ","
-            message += f'"{str(thread)}"'
+            message += f'"{str(thread).replace("\"", "\\\"")}"'
             first_recurring_thread = False
         message += "],"
         message += __render_stacktrace__(recurring_thread.recurring_stacktrace)
