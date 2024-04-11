@@ -1,4 +1,74 @@
 import yaml
+import re
+
+
+class ThreadAnalysisConfig:
+    def __init__(self, config: dict):
+        self.__config = config
+
+    @property
+    def config(self) -> dict:
+        return self.__config
+
+    @property
+    def ignore_dummy_threads(self) -> bool:
+        if "ignore_dummy_threads" not in self.__config:
+            return True
+
+        return bool(self.__config["ignore_dummy_threads"])
+
+    @property
+    def thread_name_include_patterns(self) -> list[re.Pattern]:
+        return self.__get_patterns__("include_patterns", "thread_name")
+
+    @property
+    def thread_name_exclude_patterns(self) -> list[re.Pattern]:
+        return self.__get_patterns__("exclude_patterns", "thread_name")
+
+    @property
+    def stack_trace_include_patterns(self) -> list[re.Pattern]:
+        return self.__get_patterns__("include_patterns", "stack_trace")
+
+    @property
+    def stack_trace_exclude_patterns(self) -> list[re.Pattern]:
+        return self.__get_patterns__("exclude_patterns", "stack_trace")
+
+    def __get_patterns__(self, key: str, subkey: str) -> list[re.Pattern]:
+        if key not in self.__config or subkey not in self.__config[key]:
+            return []
+
+        return [re.compile(pattern, re.MULTILINE) for pattern in self.__config[key][subkey]]
+
+
+class LongRunningThreadsConfig(ThreadAnalysisConfig):
+    def __init__(self, config: dict):
+        super().__init__(config)
+
+    @property
+    def threshold(self) -> int:
+        return self.config["threshold"]
+
+
+class MostRecurringThreadsConfig(ThreadAnalysisConfig):
+    def __init__(self, config: dict):
+        super().__init__(config)
+
+    @property
+    def threshold(self) -> int:
+        return self.config["threshold"]
+
+
+class RendererConfig:
+    def __init__(self, config: dict):
+        self.__config = config
+
+    @property
+    def type(self) -> str:
+        return self.__config["type"]
+
+    @property
+    def config(self) -> dict | None:
+        return self.__config["config"] if "config" in self.__config else None
 
 
 class Config:
@@ -28,19 +98,35 @@ class Config:
                 "long_running_threads": {
                     "ignore_dummy_threads": True,
                     "threshold": 2,
-                    "include_patterns": [],
-                    "exclude_patterns": []
+                    "include_patterns": {
+                        "thread_name": [],
+                        "stack_trace": []
+                    },
+                    "exclude_patterns": {
+                        "thread_name": [],
+                        "stack_trace": []
+                    }
                 },
                 "most_recurring_threads": {
                     "ignore_dummy_threads": True,
                     "threshold": 2,
-                    "include_patterns": [],
-                    "exclude_patterns": []
+                    "include_patterns": {
+                        "thread_name": [],
+                        "stack_trace": []
+                    },
+                    "exclude_patterns": {
+                        "thread_name": [],
+                        "stack_trace": []
+                    }
                 },
                 "renderer": {
                     "type": "console"
                 }
             }, yaml.safe_load(stream))
+
+            self.__long_running_threads = LongRunningThreadsConfig(self.__config["long_running_threads"])
+            self.__most_recurring_threads = MostRecurringThreadsConfig(self.__config["most_recurring_threads"])
+            self.__renderer = RendererConfig(self.__config["renderer"])
 
     @property
     def debug(self) -> bool:
@@ -51,41 +137,13 @@ class Config:
         return self.__config["files"]
 
     @property
-    def long_running_threads_ignore_dummy_threads(self) -> bool:
-        return self.__config["long_running_threads"]["ignore_dummy_threads"]
+    def long_running_threads(self) -> LongRunningThreadsConfig:
+        return self.__long_running_threads
 
     @property
-    def long_running_threads_threshold(self) -> int:
-        return self.__config["long_running_threads"]["threshold"]
+    def most_recurring_threads(self) -> MostRecurringThreadsConfig:
+        return self.__most_recurring_threads
 
     @property
-    def long_running_threads_include_patterns(self) -> list[str]:
-        return self.__config["long_running_threads"]["include_patterns"]
-
-    @property
-    def long_running_threads_exclude_patterns(self) -> list[str]:
-        return self.__config["long_running_threads"]["exclude_patterns"]
-
-    @property
-    def most_recurring_threads_ignore_dummy_threads(self) -> bool:
-        return self.__config["most_recurring_threads"]["ignore_dummy_threads"]
-
-    @property
-    def most_recurring_threads_threshold(self) -> int:
-        return self.__config["most_recurring_threads"]["threshold"]
-
-    @property
-    def most_recurring_threads_include_patterns(self) -> list[str]:
-        return self.__config["most_recurring_threads"]["include_patterns"]
-
-    @property
-    def most_recurring_threads_exclude_patterns(self) -> list[str]:
-        return self.__config["long_running_threads"]["exclude_patterns"]
-
-    @property
-    def renderer_type(self) -> str:
-        return self.__config["renderer"]["type"]
-
-    @property
-    def renderer_config(self) -> dict | None:
-        return self.__config["renderer"]["config"] if "config" in self.__config["renderer"] else None
+    def renderer(self) -> RendererConfig:
+        return self.__renderer

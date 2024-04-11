@@ -8,6 +8,7 @@ from renderer.FileRenderer import FileRenderer
 from renderer.JsonFileRenderer import JsonFileRenderer
 from renderer.HtmlRenderer import HtmlRenderer
 
+
 def __format_thread__(thread: Stacktrace.Thread, *, include_stacktrace=True) -> str:
     ret_value = f'Thread: {thread.thread_name} ({thread.thread_id}) - State: {thread.thread_state}'
 
@@ -63,7 +64,7 @@ def main():
                                                                    long_running_threads))
 
     # renders the output
-    renderer_type = config.renderer_type
+    renderer_type = config.renderer.type
     renderer = None
 
     match renderer_type:

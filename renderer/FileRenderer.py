@@ -6,10 +6,11 @@ class FileRenderer(ConsoleRenderer):
         super().__init__(config)
 
         # check if the renderer config is valid
-        if not self.config.renderer_config or not "output_file" in self.config.renderer_config:
+        if (not self.config.renderer or not self.config.renderer.config or "output_file" not
+                in self.config.renderer.config):
             raise ValueError("Output file is not defined in the config")
 
-        self.__output_file = self.config.renderer_config["output_file"]
+        self.__output_file = self.config.renderer.config["output_file"]
 
     @property
     def output_file(self):

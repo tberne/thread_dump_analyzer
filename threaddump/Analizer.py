@@ -1,11 +1,12 @@
 import datetime
 
-from threaddump.Stacktrace import Thread, ThreadState, StackFrame, SyncObject, SyncObjectType, ThreadDump
+from threaddump.Stacktrace import Thread, StackFrame, ThreadDump
 import re
-import threaddump.Config as Config
+from threaddump.Config import Config
 
 
-def __should_include__(stacktrace: list[StackFrame], include_patterns: list[str], exclude_patterns: list[str]) -> bool:
+def __stack_trace_match__(stacktrace: list[StackFrame], include_patterns: list[re.Pattern],
+                          exclude_patterns: list[re.Pattern]) -> bool:
     if include_patterns and len(include_patterns) > 0:
         include = False
         for pattern in include_patterns:
@@ -13,7 +14,7 @@ def __should_include__(stacktrace: list[StackFrame], include_patterns: list[str]
                 break
 
             for stack_frame in stacktrace:
-                if re.match(pattern, str(stack_frame), re.MULTILINE):
+                if re.match(pattern, str(stack_frame)):
                     include = True
                     break
 
@@ -27,9 +28,33 @@ def __should_include__(stacktrace: list[StackFrame], include_patterns: list[str]
                 break
 
             for stack_frame in stacktrace:
-                if re.match(pattern, str(stack_frame), re.MULTILINE):
+                if re.match(pattern, str(stack_frame)):
                     exclude = True
                     break
+
+        if exclude:
+            return False
+
+    return True
+
+
+def __thread_match__(thread: Thread, include_patterns: list[re.Pattern], exclude_patterns: list[re.Pattern]) -> bool:
+    if include_patterns and len(include_patterns) > 0:
+        include = False
+        for pattern in include_patterns:
+            if re.match(pattern, thread.thread_name):
+                include = True
+                break
+
+        if not include:
+            return False
+
+    if exclude_patterns and len(exclude_patterns) > 0:
+        exclude = False
+        for pattern in exclude_patterns:
+            if re.match(pattern, thread.thread_name):
+                exclude = True
+                break
 
         if exclude:
             return False
@@ -50,15 +75,25 @@ class LongRunningThread:
 
 def find_long_running_threads(tds: list[ThreadDump], *, config: Config) -> list[LongRunningThread]:
     long_running_threads = {}
-    include_patterns = config.long_running_threads_include_patterns
-    exclude_patterns = config.long_running_threads_exclude_patterns
+    include_patterns = config.long_running_threads.stack_trace_include_patterns
+    exclude_patterns = config.long_running_threads.stack_trace_exclude_patterns
 
     for thread_dump in tds:
         for thread in thread_dump.threads:
-            if not __should_include__(thread.stacktrace, include_patterns, exclude_patterns):
+            if not __thread_match__(thread, config.long_running_threads.thread_name_include_patterns,
+                                    config.long_running_threads.thread_name_exclude_patterns):
                 continue
 
-            if not thread.thread_id in long_running_threads:
+            if not __stack_trace_match__(thread.stacktrace, include_patterns, exclude_patterns):
+                continue
+
+            # ignore dummy threads
+            if config.long_running_threads.ignore_dummy_threads and len(thread.stacktrace) == 0:
+                if config.debug:
+                    print(f"Thread {thread.thread_name} is a dummy thread and, thus, is ignored.")
+                continue
+
+            if thread.thread_id not in long_running_threads:
                 long_running_threads[thread.thread_id] = {
                     "thread": thread,
                     "count": 1,
@@ -95,7 +130,7 @@ def find_long_running_threads(tds: list[ThreadDump], *, config: Config) -> list[
         thread["first_apparition"],
         thread["last_apparition"],
         thread["last_apparition"] - thread["first_apparition"]
-    ) for thread in long_running_threads.values() if thread["count"] >= config.long_running_threads_threshold]
+    ) for thread in long_running_threads.values() if thread["count"] >= config.long_running_threads.threshold]
 
     return long_running_threads
 
@@ -118,18 +153,22 @@ def find_most_recurring_threads(tds: list[ThreadDump], *, config: Config) -> lis
     if config.debug:
         print("Finding most recurring threads...")
 
-    include_patterns = config.most_recurring_threads_include_patterns
-    exclude_patterns = config.most_recurring_threads_exclude_patterns
+    include_patterns = config.most_recurring_threads.stack_trace_include_patterns
+    exclude_patterns = config.most_recurring_threads.stack_trace_exclude_patterns
 
     recurring_threads = []
     for td in tds:
         recurring_threads_in_td = {}
         for thread in td.threads:
-            if not __should_include__(thread.stacktrace, include_patterns, exclude_patterns):
+            if not __thread_match__(thread, config.most_recurring_threads.thread_name_include_patterns,
+                                    config.most_recurring_threads.thread_name_exclude_patterns):
+                continue
+
+            if not __stack_trace_match__(thread.stacktrace, include_patterns, exclude_patterns):
                 continue
 
             # ignore dummy threads
-            if config.most_recurring_threads_ignore_dummy_threads and len(thread.stacktrace) == 0:
+            if config.most_recurring_threads.ignore_dummy_threads and len(thread.stacktrace) == 0:
                 if config.debug:
                     print(f"Thread {thread.thread_name} is a dummy thread and, thus, is ignored.")
                 continue
@@ -149,12 +188,14 @@ def find_most_recurring_threads(tds: list[ThreadDump], *, config: Config) -> lis
             if config.debug:
                 print(f"Checking if the stacktrace {stacktrace_str} is already in the recurring threads...")
 
-            if not stacktrace_str in recurring_threads_in_td:
+            if stacktrace_str not in recurring_threads_in_td:
                 recurring_threads_in_td[stacktrace_str] = [thread]
             else:
                 recurring_threads_in_td[stacktrace_str].append(thread)
 
-        recurring_threads_in_td = [ThreadsWithRecurringStacktrace(threads) for threads in recurring_threads_in_td.values() if len(threads) >= config.most_recurring_threads_threshold]
+        recurring_threads_in_td = [ThreadsWithRecurringStacktrace(threads) for threads in
+                                   recurring_threads_in_td.values() if len(threads) >=
+                                   config.most_recurring_threads.threshold]
 
         if len(recurring_threads_in_td) > 0:
             recurring_threads.append(ThreadDumpsWithRecurringThreads(td.date_time, recurring_threads_in_td))
