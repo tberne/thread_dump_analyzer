@@ -22,10 +22,24 @@ long_running_threads:
   
   # the patterns to include or exclude threads
   include_patterns:
-    - ^br\.com\.company\.package\..*
+    
+    # filters threads by their stacktrace
+    stack_trace:
+      - ^br\.com\.company\.package\..*
+        
+    # filters threads by their name
+    thread_name:
+      - ^Some thread name.*
   
   exclude_patterns:
-    - ^br\.com\.company\.package\.excluded\..*
+    
+    # filters threads by their stacktrace
+    stack_trace:
+      - ^br\.com\.company\.package\.excluded\..*
+    
+    # filters threads by their name
+    thread_name:
+      - ^Some excluded thread name.*
 
 # the configuration for the most recurring threads
 most_recurring_threads: 
@@ -37,10 +51,24 @@ most_recurring_threads:
   
   # the patterns to include or exclude threads
   include_patterns:
-    - ^br\.com\.company\.package\..*
+    
+    # filters threads by their stacktrace
+    stack_trace:
+      - ^br\.com\.company\.package\..*
+        
+    # filters threads by their name
+    thread_name:
+      - ^Some thread name.*
   
   exclude_patterns:
-    - ^br\.com\.company\.package\.excluded\..*
+    
+    # filters threads by their stacktrace
+    stack_trace:
+      - ^br\.com\.company\.package\.excluded\..*
+    
+    # filters threads by their name
+    thread_name:
+      - ^Some excluded thread name.*
 
 renderer:
   type: renderer_type # one of: console, file, json, html
